@@ -11,26 +11,35 @@ import (
 )
 
 func TestCheckTokenStatusValid(t *testing.T) {
-	tmpDir, cleanup := setupTestEnv(t)
+	_, cleanup := setupTestEnv(t)
 	defer cleanup()
 
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
-	mgr.Import("token-test", "")
+	if err := mgr.Import("token-test", ""); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
 	// Write credentials with expiry in the future
-	profilesDir, _ := config.ProfilesDir()
+	profilesDir, err := config.ProfilesDir()
+	if err != nil {
+		t.Fatalf("ProfilesDir failed: %v", err)
+	}
 	credPath := filepath.Join(profilesDir, "token-test", ".credentials.json")
 	future := time.Now().Add(48 * time.Hour).Format(time.RFC3339)
 	creds := map[string]interface{}{
 		"email":     "test@example.com",
 		"expiresAt": future,
 	}
-	data, _ := json.Marshal(creds)
-	os.WriteFile(credPath, data, 0600)
+	data, err := json.Marshal(creds)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+	if err := os.WriteFile(credPath, data, 0600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
 
 	status := CheckTokenStatus("token-test")
-	_ = tmpDir
 
 	if !status.HasCreds {
 		t.Error("expected HasCreds to be true")
@@ -55,18 +64,27 @@ func TestCheckTokenStatusExpired(t *testing.T) {
 
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
-	mgr.Import("expired-test", "")
+	if err := mgr.Import("expired-test", ""); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
-	// Write credentials with expiry in the past
-	profilesDir, _ := config.ProfilesDir()
+	profilesDir, err := config.ProfilesDir()
+	if err != nil {
+		t.Fatalf("ProfilesDir failed: %v", err)
+	}
 	credPath := filepath.Join(profilesDir, "expired-test", ".credentials.json")
 	past := time.Now().Add(-48 * time.Hour).Format(time.RFC3339)
 	creds := map[string]interface{}{
 		"email":     "expired@example.com",
 		"expiresAt": past,
 	}
-	data, _ := json.Marshal(creds)
-	os.WriteFile(credPath, data, 0600)
+	data, err := json.Marshal(creds)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+	if err := os.WriteFile(credPath, data, 0600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
 
 	status := CheckTokenStatus("expired-test")
 

@@ -4,8 +4,32 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
+
+// setTestHome overrides home directory env vars for cross-platform tests.
+func setTestHome(t *testing.T, dir string) {
+	t.Helper()
+	origHome := os.Getenv("HOME")
+	origUserProfile := os.Getenv("USERPROFILE")
+
+	if err := os.Setenv("HOME", dir); err != nil {
+		t.Fatalf("cannot set HOME: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		if err := os.Setenv("USERPROFILE", dir); err != nil {
+			t.Fatalf("cannot set USERPROFILE: %v", err)
+		}
+	}
+
+	t.Cleanup(func() {
+		os.Setenv("HOME", origHome)
+		if runtime.GOOS == "windows" {
+			os.Setenv("USERPROFILE", origUserProfile)
+		}
+	})
+}
 
 func TestNewConfig(t *testing.T) {
 	cfg := NewConfig()
@@ -37,11 +61,8 @@ func TestDefaultSettings(t *testing.T) {
 }
 
 func TestSaveAndLoad(t *testing.T) {
-	// Create a temp dir to act as home
 	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
+	setTestHome(t, tmpDir)
 
 	cfg := NewConfig()
 	cfg.ActiveProfile = "test"
@@ -78,10 +99,7 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 func TestLoadNonExistent(t *testing.T) {
-	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
+	setTestHome(t, t.TempDir())
 
 	cfg, err := Load()
 	if err != nil {
@@ -121,9 +139,7 @@ func TestConfigJSON(t *testing.T) {
 
 func TestEnsureDirs(t *testing.T) {
 	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
+	setTestHome(t, tmpDir)
 
 	if err := EnsureDirs(); err != nil {
 		t.Fatalf("EnsureDirs failed: %v", err)

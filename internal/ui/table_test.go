@@ -45,7 +45,9 @@ func TestTableRender(t *testing.T) {
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("ReadFrom failed: %v", err)
+	}
 	output := buf.String()
 
 	if output == "" {
@@ -77,7 +79,10 @@ func TestTableRenderEmpty(t *testing.T) {
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("ReadFrom failed: %v", err)
+	}
+	_ = buf
 	// Empty headers = no output, just verify no panic
 }
 

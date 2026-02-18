@@ -51,10 +51,15 @@ func TestExportImportWithOverrideName(t *testing.T) {
 
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
-	mgr.Import("original", "Original")
+	if err := mgr.Import("original", "Original"); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
 	passphrase := "test-passphrase-12345678"
-	data, _ := ExportProfile("original", cfg, passphrase)
+	data, err := ExportProfile("original", cfg, passphrase)
+	if err != nil {
+		t.Fatalf("ExportProfile failed: %v", err)
+	}
 
 	cfg2 := config.NewConfig()
 	name, err := ImportFromFile(data, passphrase, "renamed", cfg2)
@@ -73,12 +78,17 @@ func TestExportWrongPassphrase(t *testing.T) {
 
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
-	mgr.Import("wrong-pass", "")
+	if err := mgr.Import("wrong-pass", ""); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
-	data, _ := ExportProfile("wrong-pass", cfg, "correct-passphrase")
+	data, err := ExportProfile("wrong-pass", cfg, "correct-passphrase")
+	if err != nil {
+		t.Fatalf("ExportProfile failed: %v", err)
+	}
 
 	cfg2 := config.NewConfig()
-	_, err := ImportFromFile(data, "wrong-passphrase", "", cfg2)
+	_, err = ImportFromFile(data, "wrong-passphrase", "", cfg2)
 	if err == nil {
 		t.Error("expected error with wrong passphrase")
 	}

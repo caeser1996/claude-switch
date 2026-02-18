@@ -9,8 +9,9 @@ import (
 func TestDetectProjectProfileFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create .claude-profile
-	os.WriteFile(filepath.Join(tmpDir, ProjectProfileFile), []byte("work\n"), 0644)
+	if err := os.WriteFile(filepath.Join(tmpDir, ProjectProfileFile), []byte("work\n"), 0644); err != nil {
+		t.Fatalf("cannot write file: %v", err)
+	}
 
 	result := detectProjectProfileFrom(tmpDir)
 	if result != "work" {
@@ -21,10 +22,13 @@ func TestDetectProjectProfileFound(t *testing.T) {
 func TestDetectProjectProfileInParent(t *testing.T) {
 	tmpDir := t.TempDir()
 	subDir := filepath.Join(tmpDir, "sub", "deep")
-	os.MkdirAll(subDir, 0755)
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatalf("cannot create subdir: %v", err)
+	}
 
-	// Profile file in root, search from deep subdir
-	os.WriteFile(filepath.Join(tmpDir, ProjectProfileFile), []byte("parent-profile\n"), 0644)
+	if err := os.WriteFile(filepath.Join(tmpDir, ProjectProfileFile), []byte("parent-profile\n"), 0644); err != nil {
+		t.Fatalf("cannot write file: %v", err)
+	}
 
 	result := detectProjectProfileFrom(subDir)
 	if result != "parent-profile" {
@@ -44,8 +48,9 @@ func TestDetectProjectProfileNotFound(t *testing.T) {
 func TestDetectProjectProfileEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Empty file
-	os.WriteFile(filepath.Join(tmpDir, ProjectProfileFile), []byte("  \n"), 0644)
+	if err := os.WriteFile(filepath.Join(tmpDir, ProjectProfileFile), []byte("  \n"), 0644); err != nil {
+		t.Fatalf("cannot write file: %v", err)
+	}
 
 	result := detectProjectProfileFrom(tmpDir)
 	if result != "" {
