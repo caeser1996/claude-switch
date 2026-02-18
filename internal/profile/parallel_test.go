@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/config"
 )
 
 func TestSetupIsolatedEnv(t *testing.T) {

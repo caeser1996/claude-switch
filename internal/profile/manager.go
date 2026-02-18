@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/config"
 )
 
 // Manager handles profile CRUD operations.

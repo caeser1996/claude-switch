@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/claude"
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/claude"
+	"github.com/caeser1996/claude-switch/internal/config"
 )
 
 var limitsCmd = &cobra.Command{

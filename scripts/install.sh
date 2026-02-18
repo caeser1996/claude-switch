@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
 # Claude Switch Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/sumanta-mukhopadhyay/claude-switch/main/scripts/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/caeser1996/claude-switch/main/scripts/install.sh | bash
 #
 
 set -euo pipefail
 
-REPO="sumanta-mukhopadhyay/claude-switch"
+REPO="caeser1996/claude-switch"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 BINARY_NAME="claude-switch"
 

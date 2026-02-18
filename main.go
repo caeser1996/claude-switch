@@ -1,6 +1,6 @@
 package main
 
-import "github.com/sumanta-mukhopadhyay/claude-switch/cmd"
+import "github.com/caeser1996/claude-switch/cmd"
 
 func main() {
 	cmd.Execute()

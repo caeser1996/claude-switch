@@ -2,7 +2,7 @@ BINARY_NAME := claude-switch
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-LDFLAGS := -ldflags "-s -w -X github.com/sumanta-mukhopadhyay/claude-switch/cmd.Version=$(VERSION) -X github.com/sumanta-mukhopadhyay/claude-switch/cmd.Commit=$(COMMIT) -X github.com/sumanta-mukhopadhyay/claude-switch/cmd.Date=$(DATE)"
+LDFLAGS := -ldflags "-s -w -X github.com/caeser1996/claude-switch/cmd.Version=$(VERSION) -X github.com/caeser1996/claude-switch/cmd.Commit=$(COMMIT) -X github.com/caeser1996/claude-switch/cmd.Date=$(DATE)"
 
 .PHONY: build clean test lint install all
 

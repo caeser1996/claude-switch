@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/profile"
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/ui"
+	"github.com/caeser1996/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/profile"
+	"github.com/caeser1996/claude-switch/internal/ui"
 )
 
 var backupCmd = &cobra.Command{

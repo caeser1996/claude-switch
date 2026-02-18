@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/config"
 )
 
 func TestRunAll(t *testing.T) {

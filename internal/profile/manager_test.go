@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/config"
 )
 
 // setupTestEnv creates a temporary home directory with a mock Claude config.

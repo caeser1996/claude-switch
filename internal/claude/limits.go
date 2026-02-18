@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/config"
 )
 
 // UsageInfo represents parsed usage/limit information.

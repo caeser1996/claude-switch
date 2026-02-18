@@ -7,12 +7,12 @@
     Downloads and installs the latest Claude Switch release.
 
 .EXAMPLE
-    irm https://raw.githubusercontent.com/sumanta-mukhopadhyay/claude-switch/main/scripts/install.ps1 | iex
+    irm https://raw.githubusercontent.com/caeser1996/claude-switch/main/scripts/install.ps1 | iex
 #>
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "sumanta-mukhopadhyay/claude-switch"
+$Repo = "caeser1996/claude-switch"
 $BinaryName = "claude-switch"
 $InstallDir = "$env:LOCALAPPDATA\Programs\claude-switch"
 

@@ -1,10 +1,10 @@
 # Claude Switch
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/sumanta-mukhopadhyay/claude-switch)](https://go.dev/)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/caeser1996/claude-switch)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/sumanta-mukhopadhyay/claude-switch/ci.yml?branch=main)](https://github.com/sumanta-mukhopadhyay/claude-switch/actions)
-[![Release](https://img.shields.io/github/v/release/sumanta-mukhopadhyay/claude-switch)](https://github.com/sumanta-mukhopadhyay/claude-switch/releases)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sumanta-mukhopadhyay/claude-switch)](https://goreportcard.com/report/github.com/sumanta-mukhopadhyay/claude-switch)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/caeser1996/claude-switch/ci.yml?branch=main)](https://github.com/caeser1996/claude-switch/actions)
+[![Release](https://img.shields.io/github/v/release/caeser1996/claude-switch)](https://github.com/caeser1996/claude-switch/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/caeser1996/claude-switch)](https://goreportcard.com/report/github.com/caeser1996/claude-switch)
 
 **A single-binary CLI tool for managing multiple Claude Code accounts.**
 No dependencies. No Node.js. No Python. Just download and run.
@@ -30,17 +30,17 @@ If you use Claude Code with multiple accounts (work, personal, client projects),
 ### From Source (Go 1.21+)
 
 ```bash
-go install github.com/sumanta-mukhopadhyay/claude-switch@latest
+go install github.com/caeser1996/claude-switch@latest
 ```
 
 ### From Releases
 
-Download the binary for your platform from [GitHub Releases](https://github.com/sumanta-mukhopadhyay/claude-switch/releases).
+Download the binary for your platform from [GitHub Releases](https://github.com/caeser1996/claude-switch/releases).
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/sumanta-mukhopadhyay/claude-switch.git
+git clone https://github.com/caeser1996/claude-switch.git
 cd claude-switch
 make build
 # Binary is in ./bin/claude-switch
@@ -166,11 +166,12 @@ make clean
 
 ## Roadmap
 
-- [ ] `cs exec <profile> -- claude "prompt"` — Run with a specific profile without switching
-- [ ] `cs limits` — Check usage/rate limits
-- [ ] `cs completion bash/zsh/fish` — Shell completions
+- [x] `cs exec <profile> -- claude "prompt"` — Run with a specific profile without switching
+- [x] `cs limits` — Check usage/rate limits
+- [x] `cs completion bash/zsh/fish` — Shell completions
+- [x] `cs backup list/restore` — Manage backups
 - [ ] `cs update` — Self-update from GitHub releases
-- [ ] `cs backup list/restore` — Manage backups
+- [ ] Profile encryption at rest
 
 ## License
 
@@ -178,4 +179,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Author
 
-**Sumanta Mukhopadhyay** — [GitHub](https://github.com/sumanta-mukhopadhyay)
+**Sumanta Mukhopadhyay** — [GitHub](https://github.com/caeser1996)

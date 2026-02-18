@@ -17,9 +17,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/sumanta-mukhopadhyay/claude-switch/cmd.Version={{.Version}}
-      - -X github.com/sumanta-mukhopadhyay/claude-switch/cmd.Commit={{.Commit}}
-      - -X github.com/sumanta-mukhopadhyay/claude-switch/cmd.Date={{.Date}}
+      - -X github.com/caeser1996/claude-switch/cmd.Version={{.Version}}
+      - -X github.com/caeser1996/claude-switch/cmd.Commit={{.Commit}}
+      - -X github.com/caeser1996/claude-switch/cmd.Date={{.Date}}
     binary: claude-switch
 
 archives:
@@ -50,11 +50,11 @@ changelog:
 
 brews:
   - repository:
-      owner: sumanta-mukhopadhyay
+      owner: caeser1996
       name: homebrew-tap
       token: "{{ .Env.GITHUB_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/sumanta-mukhopadhyay/claude-switch"
+    homepage: "https://github.com/caeser1996/claude-switch"
     description: "CLI tool for managing multiple Claude Code accounts"
     license: "MIT"
     install: |

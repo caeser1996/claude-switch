@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/config"
-	"github.com/sumanta-mukhopadhyay/claude-switch/internal/doctor"
+	"github.com/caeser1996/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/doctor"
 )
 
 var doctorCmd = &cobra.Command{
