@@ -70,16 +70,45 @@ cs list
 | Command | Description |
 |---------|-------------|
 | `cs import <name>` | Save current Claude session as a named profile |
-| `cs use <name>` | Switch to a profile |
+| `cs login <name>` | Run `claude login` then auto-import as a profile |
+| `cs use <name>` | Switch to a profile (auto-detects `.claude-profile`) |
+| `cs switch` | Interactive profile selector (TUI) |
 | `cs list` | List all profiles (`*` = active) |
+| `cs status` | Show auth status and token expiry for all profiles |
 | `cs remove <name>` | Delete a profile |
 | `cs current` | Show active profile name |
+| `cs info <name>` | Detailed info about a profile |
 
-### Diagnostics
+### Execution
+
+| Command | Description |
+|---------|-------------|
+| `cs exec <profile> -- <cmd>` | Run command with profile's credentials (no switch) |
+| `cs limits` | Show usage limits for active profile |
+
+### Sharing & Encryption
+
+| Command | Description |
+|---------|-------------|
+| `cs export <name>` | Export profile as encrypted `.csprofile` file |
+| `cs import-file <file>` | Import profile from encrypted file |
+
+### Shell Integration
+
+| Command | Description |
+|---------|-------------|
+| `cs alias` | Generate shell aliases (`claude-work`, `claude-personal`, etc.) |
+| `cs completion <shell>` | Shell completions (bash, zsh, fish, powershell) |
+
+### Maintenance
 
 | Command | Description |
 |---------|-------------|
 | `cs doctor` | Run health checks on your installation |
+| `cs backup list` | Show available backups |
+| `cs backup restore <ts>` | Restore from a backup |
+| `cs config show/edit/path` | View or edit configuration |
+| `cs update` | Self-update to the latest release |
 | `cs version` | Show version info |
 
 ### Flags
@@ -113,6 +142,44 @@ When you run `cs use work`:
 
 That's it. No symlinks, no env vars, no magic.
 
+## Per-Project Profiles
+
+Create a `.claude-profile` file in any project directory:
+
+```bash
+echo "work" > ~/projects/company-app/.claude-profile
+```
+
+Now when you run `cs use` (with no argument) inside that directory, it automatically switches to the `work` profile. The file is searched up the directory tree, so it works in subdirectories too.
+
+## Encrypted Profile Sharing
+
+Share profiles securely between machines or team members:
+
+```bash
+# Export (encrypts with AES-256-GCM)
+cs export work -o work.csprofile
+# Enter passphrase: ********
+
+# Import on another machine
+cs import-file work.csprofile
+# Enter passphrase: ********
+```
+
+## Shell Aliases
+
+Generate convenience aliases for your shell:
+
+```bash
+cs alias >> ~/.bashrc    # or ~/.zshrc
+source ~/.bashrc
+
+# Now you can use:
+claude-work              # switch to work + launch claude
+claude-personal          # switch to personal + launch claude
+cs-work                  # just switch to work
+```
+
 ## Configuration
 
 The config file lives at `~/.claude-switch/config.json`:
@@ -143,6 +210,8 @@ The config file lives at `~/.claude-switch/config.json`:
 - Profile directories use **`0700`** permissions
 - No credentials are printed or logged (even in verbose mode)
 - Backups are auto-pruned (default: keep 10 most recent)
+- **Encrypted exports** — AES-256-GCM encryption for shared profiles
+- **Token expiry detection** — Warns when tokens are expired or expiring soon
 - **No telemetry, no phone-home, fully open source**
 
 ## Development
@@ -166,11 +235,19 @@ make clean
 
 ## Roadmap
 
-- [x] `cs exec <profile> -- claude "prompt"` — Run with a specific profile without switching
-- [x] `cs limits` — Check usage/rate limits
+- [x] `cs exec <profile> -- claude "prompt"` — Isolated parallel execution
+- [x] `cs limits` — Usage/rate limit display
 - [x] `cs completion bash/zsh/fish` — Shell completions
-- [x] `cs backup list/restore` — Manage backups
-- [ ] `cs update` — Self-update from GitHub releases
+- [x] `cs backup list/restore` — Backup management
+- [x] `cs update` — Self-update from GitHub releases
+- [x] `cs login <name>` — Login and auto-import
+- [x] `cs export / import-file` — Encrypted profile sharing (AES-256-GCM)
+- [x] `cs status` — Token expiry and auth health
+- [x] `cs switch` — Interactive TUI profile selector
+- [x] `cs alias` — Shell alias generation
+- [x] `.claude-profile` — Per-project auto-switch
+- [x] Token refresh detection and warnings
+- [ ] Git hook integration (auto-switch based on repo)
 - [ ] Profile encryption at rest
 
 ## License
