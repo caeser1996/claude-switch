@@ -39,4 +39,38 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Tap
+        if: success()
+        env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          # Find the generated formula
+          FORMULA=$(find dist -name "claude-switch.rb" -type f | head -1)
+          if [ -z "$FORMULA" ]; then
+            echo "::error::No generated formula found in dist/"
+            exit 1
+          fi
+          echo "Found formula: $FORMULA"
+
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "::error::HOMEBREW_TAP_TOKEN secret is not set. Create a classic PAT with 'repo' scope and add it as a repository secret."
+            exit 1
+          fi
+
+          # Clone the tap repo using the PAT
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/caeser1996/homebrew-tap.git" /tmp/homebrew-tap
+          mkdir -p /tmp/homebrew-tap/Formula
+          cp "$FORMULA" /tmp/homebrew-tap/Formula/claude-switch.rb
+
+          cd /tmp/homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/claude-switch.rb
+          if git diff --cached --quiet; then
+            echo "No changes to formula"
+          else
+            git commit -m "Update claude-switch to ${GITHUB_REF_NAME}"
+            git push
+            echo "Homebrew formula updated successfully"
+          fi
