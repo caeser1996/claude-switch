@@ -27,9 +27,14 @@ func TestParseCredentialsInfo(t *testing.T) {
 		"plan":    "Max",
 		"orgName": "TestOrg",
 	}
-	data, _ := json.Marshal(creds)
+	data, err := json.Marshal(creds)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
 	credPath := filepath.Join(tmpDir, "creds.json")
-	os.WriteFile(credPath, data, 0600)
+	if err := os.WriteFile(credPath, data, 0600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
 
 	info := &UsageInfo{}
 	parseCredentialsInfo(credPath, info)
@@ -61,9 +66,14 @@ func TestParseStatsigMetadata(t *testing.T) {
 	meta := map[string]interface{}{
 		"model": "opus-4.5",
 	}
-	data, _ := json.Marshal(meta)
+	data, err := json.Marshal(meta)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
 	metaPath := filepath.Join(tmpDir, "statsig_metadata")
-	os.WriteFile(metaPath, data, 0600)
+	if err := os.WriteFile(metaPath, data, 0600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
 
 	info := &UsageInfo{}
 	parseStatsigMetadata(metaPath, info)

@@ -18,7 +18,9 @@ func captureOutput(fn func()) string {
 	os.Stdout = old
 
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		return ""
+	}
 	return buf.String()
 }
 
@@ -30,9 +32,13 @@ func setupTestHome(t *testing.T) func() {
 
 	// Create mock Claude config
 	claudeDir := tmpDir + "/.claude"
-	os.MkdirAll(claudeDir, 0700)
-	os.WriteFile(claudeDir+"/.credentials.json",
-		[]byte(`{"email":"test@example.com","token":"mock"}`), 0600)
+	if err := os.MkdirAll(claudeDir, 0700); err != nil {
+		t.Fatalf("cannot create .claude dir: %v", err)
+	}
+	if err := os.WriteFile(claudeDir+"/.credentials.json",
+		[]byte(`{"email":"test@example.com","token":"mock"}`), 0600); err != nil {
+		t.Fatalf("cannot write credentials: %v", err)
+	}
 
 	return func() {
 		os.Setenv("HOME", origHome)
@@ -50,7 +56,7 @@ func TestRootCommand(t *testing.T) {
 func TestVersionCommand(t *testing.T) {
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"version"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -61,7 +67,7 @@ func TestVersionCommand(t *testing.T) {
 func TestVersionVerboseCommand(t *testing.T) {
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"version", "-v"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -75,7 +81,7 @@ func TestListEmptyCommand(t *testing.T) {
 
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"list"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -88,12 +94,9 @@ func TestCurrentNoProfileCommand(t *testing.T) {
 	defer cleanup()
 
 	rootCmd.SetArgs([]string{"current"})
-	err := rootCmd.Execute()
-	// Should fail because no profile is set
-	if err == nil {
-		// Current may or may not error depending on config state
-		// Just make sure it doesn't panic
-	}
+	// Current may or may not error depending on config state
+	// Just make sure it doesn't panic
+	_ = rootCmd.Execute()
 }
 
 func TestImportAndListAndCurrentCommands(t *testing.T) {
@@ -110,7 +113,7 @@ func TestImportAndListAndCurrentCommands(t *testing.T) {
 	// List
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"list"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 	if output == "" {
 		t.Error("list should show imported profile")
@@ -119,7 +122,7 @@ func TestImportAndListAndCurrentCommands(t *testing.T) {
 	// Current
 	output = captureOutput(func() {
 		rootCmd.SetArgs([]string{"current"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 	if output == "" {
 		t.Error("current should show active profile")
@@ -132,7 +135,7 @@ func TestDoctorCommand(t *testing.T) {
 
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"doctor"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -146,7 +149,7 @@ func TestConfigShowCommand(t *testing.T) {
 
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"config", "show"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -160,7 +163,7 @@ func TestConfigPathCommand(t *testing.T) {
 
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"config", "path"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -174,7 +177,7 @@ func TestBackupListCommand(t *testing.T) {
 
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"backup", "list"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -187,11 +190,8 @@ func TestRemoveNonExistent(t *testing.T) {
 	defer cleanup()
 
 	rootCmd.SetArgs([]string{"remove", "nonexistent", "--force"})
-	err := rootCmd.Execute()
-	if err == nil {
-		// May or may not error depending on internal handling
-		// Just verify no panic
-	}
+	// May or may not error depending on internal handling; just verify no panic
+	_ = rootCmd.Execute()
 }
 
 func TestUseNonExistent(t *testing.T) {
@@ -199,10 +199,8 @@ func TestUseNonExistent(t *testing.T) {
 	defer cleanup()
 
 	rootCmd.SetArgs([]string{"use", "nonexistent"})
-	err := rootCmd.Execute()
-	if err == nil {
-		// Expected to fail
-	}
+	// Expected to fail; just verify no panic
+	_ = rootCmd.Execute()
 }
 
 func TestInfoNonExistent(t *testing.T) {
@@ -210,16 +208,14 @@ func TestInfoNonExistent(t *testing.T) {
 	defer cleanup()
 
 	rootCmd.SetArgs([]string{"info", "nonexistent"})
-	err := rootCmd.Execute()
-	if err == nil {
-		// Expected to fail
-	}
+	// Expected to fail; just verify no panic
+	_ = rootCmd.Execute()
 }
 
 func TestCompletionBash(t *testing.T) {
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"completion", "bash"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -230,7 +226,7 @@ func TestCompletionBash(t *testing.T) {
 func TestCompletionZsh(t *testing.T) {
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"completion", "zsh"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -241,7 +237,7 @@ func TestCompletionZsh(t *testing.T) {
 func TestCompletionFish(t *testing.T) {
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"completion", "fish"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -252,7 +248,7 @@ func TestCompletionFish(t *testing.T) {
 func TestCompletionPowershell(t *testing.T) {
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"completion", "powershell"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {
@@ -266,11 +262,11 @@ func TestLimitsCommand(t *testing.T) {
 
 	// Import a profile first so there's an active one
 	rootCmd.SetArgs([]string{"import", "limits-test"})
-	rootCmd.Execute()
+	_ = rootCmd.Execute()
 
 	output := captureOutput(func() {
 		rootCmd.SetArgs([]string{"limits"})
-		rootCmd.Execute()
+		_ = rootCmd.Execute()
 	})
 
 	if output == "" {

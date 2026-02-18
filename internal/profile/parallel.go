@@ -75,7 +75,7 @@ func SetupIsolatedEnv(profileName string, cfg *config.Config) (*IsolatedEnv, err
 			src := filepath.Join(claudeDir, dirName)
 			if DirExists(src) {
 				dst := filepath.Join(tmpDir, dirName)
-				os.Symlink(src, dst) // best-effort
+				_ = os.Symlink(src, dst) // best-effort
 			}
 		}
 
@@ -83,7 +83,7 @@ func SetupIsolatedEnv(profileName string, cfg *config.Config) (*IsolatedEnv, err
 			src := filepath.Join(claudeDir, fileName)
 			if FileExists(src) {
 				dst := filepath.Join(tmpDir, fileName)
-				os.Symlink(src, dst) // best-effort
+				_ = os.Symlink(src, dst) // best-effort
 			}
 		}
 	}

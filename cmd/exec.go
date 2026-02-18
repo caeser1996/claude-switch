@@ -41,7 +41,7 @@ Use -- to separate the profile name from the command arguments.`,
 			if verbose {
 				ui.Info("Cleaning up isolated environment...")
 			}
-			env.Cleanup()
+			_ = env.Cleanup()
 		}()
 
 		if verbose {

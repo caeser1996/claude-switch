@@ -58,7 +58,9 @@ func TestCheckClaudeHome(t *testing.T) {
 	}
 
 	// Create .claude dir
-	os.MkdirAll(tmpDir+"/.claude", 0700)
+	if err := os.MkdirAll(tmpDir+"/.claude", 0700); err != nil {
+		t.Fatalf("cannot create .claude dir: %v", err)
+	}
 	r = checkClaudeHome()
 	if r.Status != "ok" {
 		t.Errorf("expected ok when .claude dir exists, got %q", r.Status)
@@ -79,8 +81,12 @@ func TestCheckCredentials(t *testing.T) {
 
 	// Create credentials
 	claudeDir := tmpDir + "/.claude"
-	os.MkdirAll(claudeDir, 0700)
-	os.WriteFile(claudeDir+"/.credentials.json", []byte("{}"), 0600)
+	if err := os.MkdirAll(claudeDir, 0700); err != nil {
+		t.Fatalf("cannot create .claude dir: %v", err)
+	}
+	if err := os.WriteFile(claudeDir+"/.credentials.json", []byte("{}"), 0600); err != nil {
+		t.Fatalf("cannot write credentials: %v", err)
+	}
 	r = checkCredentials()
 	if r.Status != "ok" {
 		t.Errorf("expected ok when credentials exist, got %q", r.Status)
@@ -100,9 +106,13 @@ func TestCheckConfigFile(t *testing.T) {
 	}
 
 	// Create valid config
-	config.EnsureDirs()
+	if err := config.EnsureDirs(); err != nil {
+		t.Fatalf("EnsureDirs failed: %v", err)
+	}
 	cfg := config.NewConfig()
-	cfg.Save()
+	if err := cfg.Save(); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
 
 	r = checkConfigFile()
 	if r.Status != "ok" {
@@ -111,7 +121,9 @@ func TestCheckConfigFile(t *testing.T) {
 
 	// Create invalid config
 	cfgPath, _ := config.ConfigPath()
-	os.WriteFile(cfgPath, []byte("not json!"), 0600)
+	if err := os.WriteFile(cfgPath, []byte("not json!"), 0600); err != nil {
+		t.Fatalf("cannot write invalid config: %v", err)
+	}
 	r = checkConfigFile()
 	if r.Status != "fail" {
 		t.Errorf("expected fail when config is invalid JSON, got %q", r.Status)
@@ -132,10 +144,14 @@ func TestCheckProfiles(t *testing.T) {
 	}
 
 	// Add a profile with its directory
-	config.EnsureDirs()
+	if err := config.EnsureDirs(); err != nil {
+		t.Fatalf("EnsureDirs failed: %v", err)
+	}
 	cfg.Profiles["test"] = config.ProfileEntry{Name: "test"}
 	profilesDir, _ := config.ProfilesDir()
-	os.MkdirAll(profilesDir+"/test", 0700)
+	if err := os.MkdirAll(profilesDir+"/test", 0700); err != nil {
+		t.Fatalf("cannot create profile dir: %v", err)
+	}
 
 	r = checkProfiles(cfg)
 	if r.Status != "ok" {
@@ -163,7 +179,9 @@ func TestCheckPermissions(t *testing.T) {
 	}
 
 	// Create with proper permissions
-	config.EnsureDirs()
+	if err := config.EnsureDirs(); err != nil {
+		t.Fatalf("EnsureDirs failed: %v", err)
+	}
 	r = checkPermissions()
 	if r.Status != "ok" {
 		t.Errorf("expected ok with proper permissions, got %q", r.Status)

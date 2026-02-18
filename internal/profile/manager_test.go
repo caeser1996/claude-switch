@@ -3,31 +3,52 @@ package profile
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/caeser1996/claude-switch/internal/config"
 )
 
 // setupTestEnv creates a temporary home directory with a mock Claude config.
+// Works on both Unix and Windows by setting the appropriate env vars.
 func setupTestEnv(t *testing.T) (string, func()) {
 	t.Helper()
 	tmpDir := t.TempDir()
+
 	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
+	origUserProfile := os.Getenv("USERPROFILE")
+
+	if err := os.Setenv("HOME", tmpDir); err != nil {
+		t.Fatalf("cannot set HOME: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		if err := os.Setenv("USERPROFILE", tmpDir); err != nil {
+			t.Fatalf("cannot set USERPROFILE: %v", err)
+		}
+	}
 
 	// Create mock Claude config directory with credentials
 	claudeDir := filepath.Join(tmpDir, ".claude")
-	os.MkdirAll(claudeDir, 0700)
+	if err := os.MkdirAll(claudeDir, 0700); err != nil {
+		t.Fatalf("cannot create claude dir: %v", err)
+	}
 
 	// Create mock credentials file
 	credContent := `{"email": "test@example.com", "token": "mock-token-123"}`
-	os.WriteFile(filepath.Join(claudeDir, ".credentials.json"), []byte(credContent), 0600)
+	if err := os.WriteFile(filepath.Join(claudeDir, ".credentials.json"), []byte(credContent), 0600); err != nil {
+		t.Fatalf("cannot write credentials: %v", err)
+	}
 
 	// Create claude-switch directories
-	config.EnsureDirs()
+	if err := config.EnsureDirs(); err != nil {
+		t.Fatalf("cannot create dirs: %v", err)
+	}
 
 	cleanup := func() {
 		os.Setenv("HOME", origHome)
+		if runtime.GOOS == "windows" {
+			os.Setenv("USERPROFILE", origUserProfile)
+		}
 	}
 	return tmpDir, cleanup
 }
@@ -110,8 +131,10 @@ func TestUseProfile(t *testing.T) {
 
 	// Change the credentials to simulate a different account
 	claudeDir := filepath.Join(tmpDir, ".claude")
-	os.WriteFile(filepath.Join(claudeDir, ".credentials.json"),
-		[]byte(`{"email": "other@example.com", "token": "other-token"}`), 0600)
+	if err := os.WriteFile(filepath.Join(claudeDir, ".credentials.json"),
+		[]byte(`{"email": "other@example.com", "token": "other-token"}`), 0600); err != nil {
+		t.Fatalf("cannot write credentials: %v", err)
+	}
 
 	if err := mgr.Import("profile2", "Second"); err != nil {
 		t.Fatalf("Import profile2 failed: %v", err)
@@ -157,8 +180,9 @@ func TestRemoveProfile(t *testing.T) {
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
 
-	// Import and then import a second profile to switch to
-	mgr.Import("to-remove", "")
+	if err := mgr.Import("to-remove", ""); err != nil {
+		t.Fatalf("Import to-remove failed: %v", err)
+	}
 
 	// Cannot remove active profile
 	err := mgr.Remove("to-remove")
@@ -167,8 +191,12 @@ func TestRemoveProfile(t *testing.T) {
 	}
 
 	// Import another and switch
-	mgr.Import("keeper", "")
-	mgr.Use("keeper")
+	if err := mgr.Import("keeper", ""); err != nil {
+		t.Fatalf("Import keeper failed: %v", err)
+	}
+	if err := mgr.Use("keeper"); err != nil {
+		t.Fatalf("Use keeper failed: %v", err)
+	}
 
 	// Now remove should work
 	if err := mgr.Remove("to-remove"); err != nil {
@@ -194,8 +222,12 @@ func TestListProfiles(t *testing.T) {
 	}
 
 	// Add some profiles
-	mgr.Import("beta", "")
-	mgr.Import("alpha", "")
+	if err := mgr.Import("beta", ""); err != nil {
+		t.Fatalf("Import beta failed: %v", err)
+	}
+	if err := mgr.Import("alpha", ""); err != nil {
+		t.Fatalf("Import alpha failed: %v", err)
+	}
 
 	profiles = mgr.List()
 	if len(profiles) != 2 {
@@ -225,7 +257,9 @@ func TestCurrentProfile(t *testing.T) {
 	}
 
 	// Import sets first as active
-	mgr.Import("myprofile", "")
+	if err := mgr.Import("myprofile", ""); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
 	p, err := mgr.Current()
 	if err != nil {
@@ -243,7 +277,9 @@ func TestCopyFile(t *testing.T) {
 	dst := filepath.Join(tmpDir, "subdir", "dest.txt")
 
 	content := "hello, world"
-	os.WriteFile(src, []byte(content), 0644)
+	if err := os.WriteFile(src, []byte(content), 0644); err != nil {
+		t.Fatalf("cannot write source: %v", err)
+	}
 
 	if err := CopyFile(src, dst); err != nil {
 		t.Fatalf("CopyFile failed: %v", err)
@@ -269,7 +305,9 @@ func TestFileExists(t *testing.T) {
 
 	// File
 	f := filepath.Join(tmpDir, "exists.txt")
-	os.WriteFile(f, []byte("x"), 0644)
+	if err := os.WriteFile(f, []byte("x"), 0644); err != nil {
+		t.Fatalf("cannot write file: %v", err)
+	}
 	if !FileExists(f) {
 		t.Error("expected true for existing file")
 	}
@@ -293,7 +331,9 @@ func TestDirExists(t *testing.T) {
 
 	// File should return false
 	f := filepath.Join(tmpDir, "file.txt")
-	os.WriteFile(f, []byte("x"), 0644)
+	if err := os.WriteFile(f, []byte("x"), 0644); err != nil {
+		t.Fatalf("cannot write file: %v", err)
+	}
 	if DirExists(f) {
 		t.Error("expected false for file")
 	}
