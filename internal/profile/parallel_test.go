@@ -3,6 +3,7 @@ package profile
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -134,6 +135,9 @@ func TestIsolatedEnvCleanup(t *testing.T) {
 }
 
 func TestIsolatedEnvSharedDirs(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks require elevated privileges on Windows")
+	}
 	tmpHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 

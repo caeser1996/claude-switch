@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 const (
@@ -41,9 +42,12 @@ type CheckResult struct {
 	ReleaseURL     string
 }
 
+// httpClient is used for all outbound requests; timeout prevents hangs on slow networks.
+var httpClient = &http.Client{Timeout: 15 * time.Second}
+
 // Check queries GitHub for the latest release and compares with current version.
 func Check(currentVersion string) (*CheckResult, error) {
-	resp, err := http.Get(apiURL)
+	resp, err := httpClient.Get(apiURL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot reach GitHub: %w", err)
 	}
@@ -87,7 +91,7 @@ func Check(currentVersion string) (*CheckResult, error) {
 // Apply downloads and replaces the current binary.
 func Apply(downloadURL string) error {
 	// Download to temp file
-	resp, err := http.Get(downloadURL)
+	resp, err := httpClient.Get(downloadURL)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
