@@ -1,5 +1,12 @@
 version: 2
 
+# Accept tags with or without "v" prefix (e.g. "0.4" or "v0.4.0")
+git:
+  tag_sort: -version:refname
+  prerelease_suffix: "-"
+  ignore_tags:
+    - nightly
+
 before:
   hooks:
     - go mod tidy
@@ -60,7 +67,9 @@ changelog:
       - "^chore:"
 
 brews:
-  - repository:
+  - ids:
+      - archive
+    repository:
       owner: caeser1996
       name: homebrew-tap
       token: "{{ .Env.GITHUB_TOKEN }}"
