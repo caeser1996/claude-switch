@@ -3,7 +3,10 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "*"
+  # Also trigger when a release is created via GitHub UI
+  release:
+    types: [created]
 
 permissions:
   contents: write
@@ -12,6 +15,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # Skip duplicate runs: if triggered by release event AND a tag push, only run once
+    if: github.event_name == 'push' || (github.event_name == 'release' && !startsWith(github.event.release.tag_name, 'refs/tags/'))
     steps:
       - uses: actions/checkout@v4
         with:
