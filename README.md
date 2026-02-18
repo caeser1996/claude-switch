@@ -1,13 +1,11 @@
 # Claude Switch
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/caeser1996/claude-switch)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/caeser1996/claude-switch/ci.yml?branch=main)](https://github.com/caeser1996/claude-switch/actions)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/caeser1996/claude-switch/releases)
-[![Go Report Card](https://goreportcard.com/badge/github.com/caeser1996/claude-switch)](https://goreportcard.com/report/github.com/caeser1996/claude-switch)
 
 **A single-binary CLI tool for managing multiple Claude Code accounts.**
-No dependencies. No Node.js. No Python. Just download and run.
+No dependencies. No Go. No Node.js. No Python. Just download and run.
 
 ---
 
@@ -27,7 +25,7 @@ If you use Claude Code with multiple accounts (work, personal, client projects),
 
 ## Installation
 
-### One-liner (Linux & macOS — no Go required)
+### One-liner (Linux & macOS)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/caeser1996/claude-switch/main/scripts/install.sh | bash
@@ -63,13 +61,16 @@ sudo mv claude-switch /usr/local/bin/
 sudo ln -s /usr/local/bin/claude-switch /usr/local/bin/cs
 ```
 
-### From source (Go 1.24+)
+<details>
+<summary>From source (for contributors)</summary>
+
+Requires Go 1.24+.
 
 ```bash
 go install github.com/caeser1996/claude-switch@latest
 ```
 
-### Build from source
+Or clone and build:
 
 ```bash
 git clone https://github.com/caeser1996/claude-switch.git
@@ -77,6 +78,8 @@ cd claude-switch
 make build
 # Binary is in ./bin/claude-switch
 ```
+
+</details>
 
 ## Quick Start
 
