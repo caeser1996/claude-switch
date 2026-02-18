@@ -1,10 +1,10 @@
 # Claude Switch
 
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/caeser1996/claude-switch)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build](https://img.shields.io/badge/Build-passing-brightgreen.svg)](https://github.com/caeser1996/claude-switch/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/caeser1996/claude-switch/ci.yml?branch=main)](https://github.com/caeser1996/claude-switch/actions)
 [![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/caeser1996/claude-switch/releases)
-[![Release](https://img.shields.io/github/v/release/caeser1996/claude-switch?include_prereleases&sort=semver)](https://github.com/caeser1996/claude-switch/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/caeser1996/claude-switch)](https://goreportcard.com/report/github.com/caeser1996/claude-switch)
 
 **A single-binary CLI tool for managing multiple Claude Code accounts.**
 No dependencies. No Node.js. No Python. Just download and run.
