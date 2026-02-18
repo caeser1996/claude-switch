@@ -27,17 +27,49 @@ If you use Claude Code with multiple accounts (work, personal, client projects),
 
 ## Installation
 
-### From Source (Go 1.21+)
+### One-liner (Linux & macOS — no Go required)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/caeser1996/claude-switch/main/scripts/install.sh | bash
+```
+
+Installs `claude-switch` and a `cs` shortcut to `/usr/local/bin`. Use `INSTALL_DIR` to override:
+
+```bash
+INSTALL_DIR=~/.local/bin curl -fsSL https://raw.githubusercontent.com/caeser1996/claude-switch/main/scripts/install.sh | bash
+```
+
+### Homebrew (macOS & Linux)
+
+```bash
+brew install caeser1996/tap/claude-switch
+```
+
+### Manual download
+
+Download the pre-built binary for your platform from [GitHub Releases](https://github.com/caeser1996/claude-switch/releases):
+
+| Platform | File |
+|----------|------|
+| Linux x86-64 | `claude-switch_X.Y.Z_linux_amd64.tar.gz` |
+| Linux ARM64 | `claude-switch_X.Y.Z_linux_arm64.tar.gz` |
+| macOS Intel | `claude-switch_X.Y.Z_darwin_amd64.tar.gz` |
+| macOS Apple Silicon | `claude-switch_X.Y.Z_darwin_arm64.tar.gz` |
+| Windows x86-64 | `claude-switch_X.Y.Z_windows_amd64.zip` |
+
+```bash
+tar -xzf claude-switch_*_linux_amd64.tar.gz
+sudo mv claude-switch /usr/local/bin/
+sudo ln -s /usr/local/bin/claude-switch /usr/local/bin/cs
+```
+
+### From source (Go 1.24+)
 
 ```bash
 go install github.com/caeser1996/claude-switch@latest
 ```
 
-### From Releases
-
-Download the binary for your platform from [GitHub Releases](https://github.com/caeser1996/claude-switch/releases).
-
-### Build from Source
+### Build from source
 
 ```bash
 git clone https://github.com/caeser1996/claude-switch.git
