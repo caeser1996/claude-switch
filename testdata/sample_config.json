@@ -1,0 +1,24 @@
+{
+  "active_profile": "work",
+  "profiles": {
+    "work": {
+      "name": "work",
+      "email": "user@company.com",
+      "description": "Work account",
+      "created_at": "2026-02-19T14:30:00Z",
+      "is_active": true
+    },
+    "personal": {
+      "name": "personal",
+      "email": "user@gmail.com",
+      "description": "Personal account",
+      "created_at": "2026-02-19T14:32:00Z",
+      "is_active": false
+    }
+  },
+  "settings": {
+    "auto_backup": true,
+    "max_backups": 10,
+    "color_output": true
+  }
+}
