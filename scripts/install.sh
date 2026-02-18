@@ -17,10 +17,10 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-info()  { echo -e "${BLUE}ℹ${NC}  $*"; }
+info()    { echo -e "${BLUE}ℹ${NC}  $*"; }
 success() { echo -e "${GREEN}✓${NC}  $*"; }
-warn()  { echo -e "${YELLOW}⚠${NC}  $*"; }
-error() { echo -e "${RED}✗${NC}  $*" >&2; }
+warn()    { echo -e "${YELLOW}⚠${NC}  $*"; }
+error()   { echo -e "${RED}✗${NC}  $*" >&2; }
 
 # Detect OS and architecture
 detect_platform() {
@@ -55,6 +55,16 @@ get_latest_version() {
     echo "$version"
 }
 
+# Install or update a file, using sudo if needed
+install_file() {
+    local src="$1" dst="$2"
+    if [ -w "$(dirname "$dst")" ]; then
+        mv "$src" "$dst"
+    else
+        sudo mv "$src" "$dst"
+    fi
+}
+
 main() {
     echo ""
     echo "  Claude Switch Installer"
@@ -62,7 +72,7 @@ main() {
     echo ""
 
     # Check for required tools
-    for tool in curl; do
+    for tool in curl tar; do
         if ! command -v "$tool" &> /dev/null; then
             error "$tool is required but not installed"
             exit 1
@@ -77,7 +87,7 @@ main() {
     version="$(get_latest_version)"
     info "Latest version: ${version}"
 
-    # Construct download URL
+    # Construct download URL (versioned tar.gz archive)
     local version_no_v="${version#v}"
     download_url="https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}_${version_no_v}_${platform}.tar.gz"
     info "Downloading: ${download_url}"
@@ -89,24 +99,20 @@ main() {
     curl -fsSL "$download_url" -o "${tmp_dir}/archive.tar.gz"
     tar -xzf "${tmp_dir}/archive.tar.gz" -C "$tmp_dir"
 
-    # Install
-    if [ -w "$INSTALL_DIR" ]; then
-        mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
-    else
-        info "Requesting sudo access to install to ${INSTALL_DIR}"
-        sudo mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
-    fi
+    # Install binary
+    install_file "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-
     success "Installed ${BINARY_NAME} ${version} to ${INSTALL_DIR}/${BINARY_NAME}"
-    echo ""
 
-    # Create alias hint
-    if ! command -v cs &> /dev/null; then
-        warn "Consider adding an alias for convenience:"
-        echo "    echo 'alias cs=claude-switch' >> ~/.bashrc"
-        echo ""
+    # Create cs symlink
+    if [ -w "$INSTALL_DIR" ]; then
+        ln -sf "${INSTALL_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/cs"
+    else
+        sudo ln -sf "${INSTALL_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/cs"
     fi
+    success "Created shortcut: cs → ${BINARY_NAME}"
+
+    echo ""
 
     # Verify
     if command -v "$BINARY_NAME" &> /dev/null; then
@@ -114,7 +120,7 @@ main() {
     fi
 
     echo ""
-    success "Installation complete! Run 'claude-switch --help' to get started."
+    success "Done! Run 'cs --help' to get started."
 }
 
 main

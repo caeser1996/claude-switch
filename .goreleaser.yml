@@ -3,7 +3,7 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - go test ./...
+    - go test ./... -timeout 5m
 
 builds:
   - env:
@@ -23,7 +23,9 @@ builds:
     binary: claude-switch
 
 archives:
-  - format: tar.gz
+  # Standard compressed archives for manual download and install.sh
+  - id: archive
+    format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -32,6 +34,15 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+
+  # Raw binaries used by `cs update` for self-updating
+  # Named claude-switch_os_arch (+ .exe on Windows) with no version or extension
+  - id: binary
+    format: binary
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Os }}_
+      {{- .Arch }}
 
 checksum:
   name_template: "checksums.txt"
@@ -59,5 +70,6 @@ brews:
     license: "MIT"
     install: |
       bin.install "claude-switch"
+      bin.install_symlink "claude-switch" => "cs"
     test: |
       system "#{bin}/claude-switch", "version"
