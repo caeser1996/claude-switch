@@ -55,16 +55,6 @@ get_latest_version() {
     echo "$version"
 }
 
-# Install or update a file, using sudo if needed
-install_file() {
-    local src="$1" dst="$2"
-    if [ -w "$(dirname "$dst")" ]; then
-        mv "$src" "$dst"
-    else
-        sudo mv "$src" "$dst"
-    fi
-}
-
 main() {
     echo ""
     echo "  Claude Switch Installer"
@@ -79,7 +69,8 @@ main() {
         fi
     done
 
-    local platform version download_url tmp_dir
+    local platform version tmp_dir
+    local base_url archive_url binary_url
 
     platform="$(detect_platform)"
     info "Detected platform: ${platform}"
@@ -87,20 +78,43 @@ main() {
     version="$(get_latest_version)"
     info "Latest version: ${version}"
 
-    # Construct download URL (versioned tar.gz archive)
+    # Strip leading "v" for archive filename (GoReleaser uses version without v)
     local version_no_v="${version#v}"
-    download_url="https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}_${version_no_v}_${platform}.tar.gz"
-    info "Downloading: ${download_url}"
+    base_url="https://github.com/${REPO}/releases/download/${version}"
 
-    # Download and extract
+    # GoReleaser produces two asset types:
+    #   1. tar.gz archive:  claude-switch_0.3.0_darwin_arm64.tar.gz
+    #   2. raw binary:      claude-switch_darwin_arm64
+    archive_url="${base_url}/${BINARY_NAME}_${version_no_v}_${platform}.tar.gz"
+    binary_url="${base_url}/${BINARY_NAME}_${platform}"
+
     tmp_dir="$(mktemp -d)"
     trap 'rm -rf "$tmp_dir"' EXIT
 
-    curl -fsSL "$download_url" -o "${tmp_dir}/archive.tar.gz"
-    tar -xzf "${tmp_dir}/archive.tar.gz" -C "$tmp_dir"
+    # Try tar.gz archive first, fall back to raw binary
+    if curl -fsSL "$archive_url" -o "${tmp_dir}/archive.tar.gz" 2>/dev/null; then
+        info "Downloading archive: ${archive_url}"
+        tar -xzf "${tmp_dir}/archive.tar.gz" -C "$tmp_dir"
+    elif curl -fsSL "$binary_url" -o "${tmp_dir}/${BINARY_NAME}" 2>/dev/null; then
+        info "Downloading binary: ${binary_url}"
+    else
+        error "Failed to download claude-switch ${version} for ${platform}"
+        error "Tried:"
+        error "  ${archive_url}"
+        error "  ${binary_url}"
+        error ""
+        error "Check available assets at:"
+        error "  https://github.com/${REPO}/releases/tag/${version}"
+        exit 1
+    fi
 
     # Install binary
-    install_file "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+    if [ -w "$INSTALL_DIR" ]; then
+        mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+    else
+        info "Requesting sudo access to install to ${INSTALL_DIR}"
+        sudo mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+    fi
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     success "Installed ${BINARY_NAME} ${version} to ${INSTALL_DIR}/${BINARY_NAME}"
 
