@@ -26,7 +26,7 @@ func TestSetupIsolatedEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SetupIsolatedEnv failed: %v", err)
 	}
-	defer env.Cleanup()
+	defer func() { _ = env.Cleanup() }()
 
 	// Verify temp dir was created
 	if env.TempDir == "" {
@@ -66,13 +66,15 @@ func TestIsolatedEnvEnv(t *testing.T) {
 
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
-	mgr.Import("env-test", "")
+	if err := mgr.Import("env-test", ""); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
 	env, err := SetupIsolatedEnv("env-test", cfg)
 	if err != nil {
 		t.Fatalf("SetupIsolatedEnv failed: %v", err)
 	}
-	defer env.Cleanup()
+	defer func() { _ = env.Cleanup() }()
 
 	envVars := env.Env()
 
@@ -109,7 +111,9 @@ func TestIsolatedEnvCleanup(t *testing.T) {
 
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
-	mgr.Import("cleanup-test", "")
+	if err := mgr.Import("cleanup-test", ""); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
 	env, err := SetupIsolatedEnv("cleanup-test", cfg)
 	if err != nil {
@@ -136,21 +140,29 @@ func TestIsolatedEnvSharedDirs(t *testing.T) {
 	// Create shared dirs in the Claude config
 	claudeDir := filepath.Join(tmpHome, ".claude")
 	commandsDir := filepath.Join(claudeDir, "commands")
-	os.MkdirAll(commandsDir, 0700)
-	os.WriteFile(filepath.Join(commandsDir, "test.md"), []byte("# Test command"), 0600)
+	if err := os.MkdirAll(commandsDir, 0700); err != nil {
+		t.Fatalf("cannot create commands dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(commandsDir, "test.md"), []byte("# Test command"), 0600); err != nil {
+		t.Fatalf("cannot write test.md: %v", err)
+	}
 
 	settingsFile := filepath.Join(claudeDir, "settings.json")
-	os.WriteFile(settingsFile, []byte(`{"key":"value"}`), 0600)
+	if err := os.WriteFile(settingsFile, []byte(`{"key":"value"}`), 0600); err != nil {
+		t.Fatalf("cannot write settings.json: %v", err)
+	}
 
 	cfg := config.NewConfig()
 	mgr := NewManager(cfg)
-	mgr.Import("shared-test", "")
+	if err := mgr.Import("shared-test", ""); err != nil {
+		t.Fatalf("Import failed: %v", err)
+	}
 
 	env, err := SetupIsolatedEnv("shared-test", cfg)
 	if err != nil {
 		t.Fatalf("SetupIsolatedEnv failed: %v", err)
 	}
-	defer env.Cleanup()
+	defer func() { _ = env.Cleanup() }()
 
 	// Check that symlinks were created for shared dirs
 	symlinkPath := filepath.Join(env.TempDir, "commands")
