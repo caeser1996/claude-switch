@@ -67,7 +67,9 @@ changelog:
       - "^chore:"
 
 brews:
-  - repository:
+  - ids:
+      - archive
+    repository:
       owner: caeser1996
       name: homebrew-tap
       token: "{{ .Env.GITHUB_TOKEN }}"
