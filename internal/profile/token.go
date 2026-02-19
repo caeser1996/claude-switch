@@ -45,32 +45,46 @@ func CheckTokenStatus(name string) TokenStatus {
 		return status
 	}
 
-	if email, ok := creds["email"].(string); ok {
-		status.Email = email
+	// Check top-level and nested objects for email/expiry.
+	sources := []map[string]interface{}{creds}
+	for _, key := range []string{"claudeAiOauth", "oauth", "credentials", "account"} {
+		if nested, ok := creds[key].(map[string]interface{}); ok {
+			sources = append(sources, nested)
+		}
 	}
 
-	// Check for expiry fields (expiresAt, expires_at, exp)
-	for _, key := range []string{"expiresAt", "expires_at", "exp"} {
-		if v, ok := creds[key]; ok {
-			if expStr, ok := v.(string); ok {
-				if t, err := time.Parse(time.RFC3339, expStr); err == nil {
-					status.ExpiresAt = &t
-					status.IsExpired = time.Now().After(t)
-					if !status.IsExpired {
-						status.ExpiresIn = formatDuration(time.Until(t))
-					}
+	for _, src := range sources {
+		if status.Email == "" {
+			for _, key := range []string{"email", "userEmail", "user_email"} {
+				if v, ok := src[key].(string); ok && v != "" {
+					status.Email = v
 					break
 				}
 			}
-			// Could be a numeric timestamp
-			if expNum, ok := v.(float64); ok {
-				t := time.Unix(int64(expNum), 0)
-				status.ExpiresAt = &t
-				status.IsExpired = time.Now().After(t)
-				if !status.IsExpired {
-					status.ExpiresIn = formatDuration(time.Until(t))
+		}
+		if status.ExpiresAt == nil {
+			for _, key := range []string{"expiresAt", "expires_at", "exp"} {
+				if v, ok := src[key]; ok {
+					if expStr, ok := v.(string); ok {
+						if t, err := time.Parse(time.RFC3339, expStr); err == nil {
+							status.ExpiresAt = &t
+							status.IsExpired = time.Now().After(t)
+							if !status.IsExpired {
+								status.ExpiresIn = formatDuration(time.Until(t))
+							}
+							break
+						}
+					}
+					if expNum, ok := v.(float64); ok {
+						t := time.Unix(int64(expNum), 0)
+						status.ExpiresAt = &t
+						status.IsExpired = time.Now().After(t)
+						if !status.IsExpired {
+							status.ExpiresIn = formatDuration(time.Until(t))
+						}
+						break
+					}
 				}
-				break
 			}
 		}
 	}

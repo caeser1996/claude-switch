@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/caeser1996/claude-switch/internal/config"
+	"github.com/caeser1996/claude-switch/internal/profile"
 )
 
 // UsageInfo represents parsed usage/limit information.
@@ -26,10 +27,17 @@ type UsageInfo struct {
 func GetUsageInfo() (*UsageInfo, error) {
 	info := &UsageInfo{}
 
-	// Try reading from credentials for email/plan info
+	// Try reading from the credentials file first.
 	credPath, err := config.ClaudeCredentialsPath()
 	if err == nil {
 		parseCredentialsInfo(credPath, info)
+	}
+
+	// If no data from file, try the platform credential store (Keychain on macOS).
+	if info.Email == "" {
+		if data, err := profile.ReadCurrentCredentials(); err == nil {
+			parseCredentialsData(data, info)
+		}
 	}
 
 	// Try reading from statsig metadata for plan/model info
@@ -41,32 +49,63 @@ func GetUsageInfo() (*UsageInfo, error) {
 	return info, nil
 }
 
-// parseCredentialsInfo extracts email and account info from credentials.
+// parseCredentialsInfo extracts email and account info from a credentials file.
 func parseCredentialsInfo(path string, info *UsageInfo) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return
 	}
+	parseCredentialsData(data, info)
+}
 
-	// Try to parse as JSON and extract known fields
+// parseCredentialsData extracts email and account info from raw JSON bytes.
+// It checks both top-level fields and nested objects (e.g., claudeAiOauth).
+func parseCredentialsData(data []byte, info *UsageInfo) {
 	var creds map[string]interface{}
 	if err := json.Unmarshal(data, &creds); err != nil {
 		return
 	}
 
-	if email, ok := creds["email"].(string); ok {
-		info.Email = email
-	}
+	extractFields(creds, info)
 
-	if plan, ok := creds["plan"].(string); ok {
-		info.Plan = plan
+	// If email still not found, check nested objects that might contain credentials.
+	if info.Email == "" {
+		for _, key := range []string{"claudeAiOauth", "oauth", "credentials", "account"} {
+			if nested, ok := creds[key].(map[string]interface{}); ok {
+				extractFields(nested, info)
+				if info.Email != "" {
+					break
+				}
+			}
+		}
 	}
+}
 
-	if org, ok := creds["orgName"].(string); ok {
-		info.OrgName = org
+// extractFields pulls known fields from a JSON map into UsageInfo.
+func extractFields(m map[string]interface{}, info *UsageInfo) {
+	if info.Email == "" {
+		for _, key := range []string{"email", "userEmail", "user_email"} {
+			if v, ok := m[key].(string); ok && v != "" {
+				info.Email = v
+				break
+			}
+		}
 	}
-	if org, ok := creds["org_name"].(string); ok && info.OrgName == "" {
-		info.OrgName = org
+	if info.Plan == "" {
+		for _, key := range []string{"plan", "planType", "plan_type"} {
+			if v, ok := m[key].(string); ok && v != "" {
+				info.Plan = v
+				break
+			}
+		}
+	}
+	if info.OrgName == "" {
+		for _, key := range []string{"orgName", "org_name", "organization"} {
+			if v, ok := m[key].(string); ok && v != "" {
+				info.OrgName = v
+				break
+			}
+		}
 	}
 }
 

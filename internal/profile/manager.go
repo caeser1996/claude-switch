@@ -440,24 +440,38 @@ func validateProfileName(name string) error {
 }
 
 // extractEmailFromCredentials tries to read an email from the credentials JSON.
+// It checks top-level and common nested objects (e.g., claudeAiOauth).
 func extractEmailFromCredentials(path string) string {
-	// We do a best-effort extraction without pulling in a full JSON parser
-	// for the credential structure. If the credentials contain an email field,
-	// we'll find it.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}
+	return extractEmailFromData(data)
+}
 
-	// Simple JSON extraction: look for "email":"value"
-	type credShape struct {
-		Email string `json:"email"`
+// extractEmailFromData extracts an email from raw credential JSON bytes.
+func extractEmailFromData(data []byte) string {
+	var creds map[string]interface{}
+	if err := jsonUnmarshal(data, &creds); err != nil {
+		return ""
 	}
 
-	// Try unmarshaling as a simple object
-	var cred credShape
-	if err := jsonUnmarshal(data, &cred); err == nil && cred.Email != "" {
-		return cred.Email
+	// Check top-level email fields.
+	for _, key := range []string{"email", "userEmail", "user_email"} {
+		if v, ok := creds[key].(string); ok && v != "" {
+			return v
+		}
+	}
+
+	// Check common nested objects.
+	for _, key := range []string{"claudeAiOauth", "oauth", "credentials", "account"} {
+		if nested, ok := creds[key].(map[string]interface{}); ok {
+			for _, eKey := range []string{"email", "userEmail", "user_email"} {
+				if v, ok := nested[eKey].(string); ok && v != "" {
+					return v
+				}
+			}
+		}
 	}
 
 	return ""

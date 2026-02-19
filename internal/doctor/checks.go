@@ -122,25 +122,43 @@ func checkClaudeHome() CheckResult {
 }
 
 func checkCredentials() CheckResult {
+	// First check the platform credential store (Keychain on macOS).
+	if _, err := profile.ReadCurrentCredentials(); err == nil {
+		if runtime.GOOS == "darwin" {
+			return CheckResult{
+				Name:    "Credentials",
+				Status:  "ok",
+				Message: "credentials found in macOS Keychain",
+			}
+		}
+		return CheckResult{
+			Name:    "Credentials",
+			Status:  "ok",
+			Message: "credentials file present",
+		}
+	}
+
+	// Fall back to checking the file directly.
 	path, err := config.ClaudeCredentialsPath()
 	if err != nil {
 		return CheckResult{
 			Name:    "Credentials",
-			Status:  "fail",
-			Message: err.Error(),
+			Status:  "warn",
+			Message: "no credentials found — are you logged in?",
 		}
 	}
-	if !profile.FileExists(path) {
+	if profile.FileExists(path) {
 		return CheckResult{
 			Name:    "Credentials",
-			Status:  "warn",
-			Message: "no credentials file found — are you logged in?",
+			Status:  "ok",
+			Message: "credentials file present",
 		}
 	}
+
 	return CheckResult{
 		Name:    "Credentials",
-		Status:  "ok",
-		Message: "credentials file present",
+		Status:  "warn",
+		Message: "no credentials found — are you logged in?",
 	}
 }
 
