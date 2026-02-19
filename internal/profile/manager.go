@@ -54,7 +54,7 @@ func (m *Manager) ImportFromDir(name, description, srcDir string) error {
 		return fmt.Errorf("no credential files found — authentication may not have completed")
 	}
 
-	email := extractEmailFromCredentials(filepath.Join(profileDir, ".credentials.json"))
+	email := extractEmailForProfile(profileDir)
 
 	isFirst := len(m.Config.Profiles) == 0
 	m.Config.Profiles[name] = config.ProfileEntry{
@@ -106,7 +106,17 @@ func (m *Manager) ImportFromCredentialStore(name, description string) error {
 		}
 	}
 
-	email := extractEmailFromCredentials(filepath.Join(profileDir, ".credentials.json"))
+	// Copy ~/.claude.json which contains oauthAccount.emailAddress.
+	if home, err := os.UserHomeDir(); err == nil {
+		for _, fname := range HomeCredentialFiles {
+			src := filepath.Join(home, fname)
+			if FileExists(src) {
+				_ = CopyFile(src, filepath.Join(profileDir, "home_"+fname))
+			}
+		}
+	}
+
+	email := extractEmailForProfile(profileDir)
 
 	isFirst := len(m.Config.Profiles) == 0
 	m.Config.Profiles[name] = config.ProfileEntry{
@@ -198,7 +208,7 @@ func (m *Manager) Import(name, description string) error {
 		return fmt.Errorf("no credential files found — is Claude Code installed and logged in?")
 	}
 
-	email := extractEmailFromCredentials(filepath.Join(profileDir, ".credentials.json"))
+	email := extractEmailForProfile(profileDir)
 
 	isFirst := len(m.Config.Profiles) == 0
 	m.Config.Profiles[name] = config.ProfileEntry{
@@ -439,38 +449,72 @@ func validateProfileName(name string) error {
 	return nil
 }
 
-// extractEmailFromCredentials tries to read an email from the credentials JSON.
-// It checks top-level and common nested objects (e.g., claudeAiOauth).
+// extractEmailForProfile resolves the email for a profile by checking multiple sources:
+// 1. ~/.claude.json → oauthAccount.emailAddress (primary source on macOS)
+// 2. The profile's home_.claude.json backup (same field)
+// 3. The credential JSON file (.credentials.json) as last resort
+func extractEmailForProfile(profileDir string) string {
+	// 1. Try the live ~/.claude.json first (most reliable source).
+	if home, err := os.UserHomeDir(); err == nil {
+		if email := extractEmailFromClaudeJSON(filepath.Join(home, ".claude.json")); email != "" {
+			return email
+		}
+	}
+
+	// 2. Try the profile's backed-up home_.claude.json.
+	if email := extractEmailFromClaudeJSON(filepath.Join(profileDir, "home_.claude.json")); email != "" {
+		return email
+	}
+
+	// 3. Fall back to .credentials.json (may contain email on some setups).
+	return extractEmailFromCredentials(filepath.Join(profileDir, ".credentials.json"))
+}
+
+// extractEmailFromClaudeJSON reads email from ~/.claude.json format:
+// {"oauthAccount": {"emailAddress": "user@example.com"}}
+func extractEmailFromClaudeJSON(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+
+	var cfg map[string]interface{}
+	if err := jsonUnmarshal(data, &cfg); err != nil {
+		return ""
+	}
+
+	// Check oauthAccount.emailAddress (primary field used by Claude Code).
+	if acct, ok := cfg["oauthAccount"].(map[string]interface{}); ok {
+		if email, ok := acct["emailAddress"].(string); ok && email != "" {
+			return email
+		}
+	}
+
+	// Also check top-level email fields as fallback.
+	for _, key := range []string{"email", "userEmail"} {
+		if v, ok := cfg[key].(string); ok && v != "" {
+			return v
+		}
+	}
+
+	return ""
+}
+
+// extractEmailFromCredentials tries to read an email from a credentials JSON file.
 func extractEmailFromCredentials(path string) string {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
 	}
-	return extractEmailFromData(data)
-}
 
-// extractEmailFromData extracts an email from raw credential JSON bytes.
-func extractEmailFromData(data []byte) string {
 	var creds map[string]interface{}
 	if err := jsonUnmarshal(data, &creds); err != nil {
 		return ""
 	}
 
-	// Check top-level email fields.
-	for _, key := range []string{"email", "userEmail", "user_email"} {
+	for _, key := range []string{"email", "userEmail"} {
 		if v, ok := creds[key].(string); ok && v != "" {
 			return v
-		}
-	}
-
-	// Check common nested objects.
-	for _, key := range []string{"claudeAiOauth", "oauth", "credentials", "account"} {
-		if nested, ok := creds[key].(map[string]interface{}); ok {
-			for _, eKey := range []string{"email", "userEmail", "user_email"} {
-				if v, ok := nested[eKey].(string); ok && v != "" {
-					return v
-				}
-			}
 		}
 	}
 

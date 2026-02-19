@@ -29,11 +29,16 @@ func CheckTokenStatus(name string) TokenStatus {
 		return status
 	}
 
-	credPath := filepath.Join(profilesDir, name, ".credentials.json")
+	profileDir := filepath.Join(profilesDir, name)
+
+	credPath := filepath.Join(profileDir, ".credentials.json")
 	if !FileExists(credPath) {
 		return status
 	}
 	status.HasCreds = true
+
+	// Extract email from ~/.claude.json or the profile's backup of it.
+	status.Email = extractEmailForProfile(profileDir)
 
 	data, err := os.ReadFile(credPath)
 	if err != nil {
@@ -45,47 +50,45 @@ func CheckTokenStatus(name string) TokenStatus {
 		return status
 	}
 
-	// Check top-level and nested objects for email/expiry.
+	// Check top-level and claudeAiOauth for expiry.
+	// The actual credential format is:
+	//   {"claudeAiOauth": {"accessToken":"...", "expiresAt": 1748658860401}}
+	// expiresAt is in MILLISECONDS.
 	sources := []map[string]interface{}{creds}
-	for _, key := range []string{"claudeAiOauth", "oauth", "credentials", "account"} {
-		if nested, ok := creds[key].(map[string]interface{}); ok {
-			sources = append(sources, nested)
-		}
+	if nested, ok := creds["claudeAiOauth"].(map[string]interface{}); ok {
+		sources = append(sources, nested)
 	}
 
 	for _, src := range sources {
-		if status.Email == "" {
-			for _, key := range []string{"email", "userEmail", "user_email"} {
-				if v, ok := src[key].(string); ok && v != "" {
-					status.Email = v
+		if status.ExpiresAt != nil {
+			break
+		}
+		for _, key := range []string{"expiresAt", "expires_at", "exp"} {
+			if v, ok := src[key]; ok {
+				if expStr, ok := v.(string); ok {
+					if t, err := time.Parse(time.RFC3339, expStr); err == nil {
+						status.ExpiresAt = &t
+						break
+					}
+				}
+				if expNum, ok := v.(float64); ok {
+					ts := int64(expNum)
+					// Claude Code stores expiresAt in milliseconds.
+					if ts > 1e12 {
+						ts = ts / 1000
+					}
+					t := time.Unix(ts, 0)
+					status.ExpiresAt = &t
 					break
 				}
 			}
 		}
-		if status.ExpiresAt == nil {
-			for _, key := range []string{"expiresAt", "expires_at", "exp"} {
-				if v, ok := src[key]; ok {
-					if expStr, ok := v.(string); ok {
-						if t, err := time.Parse(time.RFC3339, expStr); err == nil {
-							status.ExpiresAt = &t
-							status.IsExpired = time.Now().After(t)
-							if !status.IsExpired {
-								status.ExpiresIn = formatDuration(time.Until(t))
-							}
-							break
-						}
-					}
-					if expNum, ok := v.(float64); ok {
-						t := time.Unix(int64(expNum), 0)
-						status.ExpiresAt = &t
-						status.IsExpired = time.Now().After(t)
-						if !status.IsExpired {
-							status.ExpiresIn = formatDuration(time.Until(t))
-						}
-						break
-					}
-				}
-			}
+	}
+
+	if status.ExpiresAt != nil {
+		status.IsExpired = time.Now().After(*status.ExpiresAt)
+		if !status.IsExpired {
+			status.ExpiresIn = formatDuration(time.Until(*status.ExpiresAt))
 		}
 	}
 

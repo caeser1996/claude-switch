@@ -27,14 +27,20 @@ type UsageInfo struct {
 func GetUsageInfo() (*UsageInfo, error) {
 	info := &UsageInfo{}
 
-	// Try reading from the credentials file first.
+	// Primary email source: ~/.claude.json → oauthAccount.emailAddress
+	// This is where Claude Code stores the logged-in user's email.
+	if home, err := os.UserHomeDir(); err == nil {
+		parseClaudeJSON(filepath.Join(home, ".claude.json"), info)
+	}
+
+	// Try reading plan/org from the credentials file.
 	credPath, err := config.ClaudeCredentialsPath()
 	if err == nil {
 		parseCredentialsInfo(credPath, info)
 	}
 
 	// If no data from file, try the platform credential store (Keychain on macOS).
-	if info.Email == "" {
+	if info.Email == "" && info.Plan == "" {
 		if data, err := profile.ReadCurrentCredentials(); err == nil {
 			parseCredentialsData(data, info)
 		}
@@ -47,6 +53,26 @@ func GetUsageInfo() (*UsageInfo, error) {
 	}
 
 	return info, nil
+}
+
+// parseClaudeJSON extracts email from ~/.claude.json.
+// Format: {"oauthAccount": {"emailAddress": "user@example.com"}}
+func parseClaudeJSON(path string, info *UsageInfo) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	var cfg map[string]interface{}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return
+	}
+
+	if acct, ok := cfg["oauthAccount"].(map[string]interface{}); ok {
+		if email, ok := acct["emailAddress"].(string); ok && email != "" {
+			info.Email = email
+		}
+	}
 }
 
 // parseCredentialsInfo extracts email and account info from a credentials file.
