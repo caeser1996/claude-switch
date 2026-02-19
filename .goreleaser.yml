@@ -75,11 +75,11 @@ brews:
     repository:
       owner: caeser1996
       name: homebrew-tap
-      token: "{{ .Env.GITHUB_TOKEN }}"
     directory: Formula
     homepage: "https://github.com/caeser1996/claude-switch"
     description: "CLI tool for managing multiple Claude Code accounts"
     license: "MIT"
+    skip_upload: true
     install: |
       bin.install "claude-switch"
       bin.install_symlink "claude-switch" => "cs"
