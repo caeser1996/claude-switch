@@ -54,6 +54,17 @@ func (m *Manager) ImportFromDir(name, description, srcDir string) error {
 		return fmt.Errorf("no credential files found — authentication may not have completed")
 	}
 
+	// Copy ~/.claude.json which contains oauthAccount.emailAddress.
+	// Claude may write it to the real home dir even with a custom CLAUDE_CONFIG_DIR.
+	if home, err := os.UserHomeDir(); err == nil {
+		for _, fname := range HomeCredentialFiles {
+			src := filepath.Join(home, fname)
+			if FileExists(src) {
+				_ = CopyFile(src, filepath.Join(profileDir, "home_"+fname))
+			}
+		}
+	}
+
 	email := extractEmailForProfile(profileDir)
 
 	isFirst := len(m.Config.Profiles) == 0
