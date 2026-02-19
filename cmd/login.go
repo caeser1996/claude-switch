@@ -67,14 +67,6 @@ This is a convenience shortcut for:
 
 		fmt.Println()
 
-		// Check if credentials appeared in the temp dir.
-		credsPath := filepath.Join(tmpDir, ".credentials.json")
-		if !profile.FileExists(credsPath) {
-			return fmt.Errorf("no credentials found after login — authentication may not have completed")
-		}
-
-		ui.Info("Login complete. Importing as profile %q...", name)
-
 		if err := config.EnsureDirs(); err != nil {
 			return err
 		}
@@ -85,8 +77,21 @@ This is a convenience shortcut for:
 		}
 
 		mgr := profile.NewManager(cfg)
-		if err := mgr.ImportFromDir(name, loginDescription, tmpDir); err != nil {
-			return err
+
+		// Try to import credentials. On macOS, credentials go to the
+		// Keychain rather than the temp dir, so we check both locations.
+		credsPath := filepath.Join(tmpDir, ".credentials.json")
+		if profile.FileExists(credsPath) {
+			// Credentials landed in the temp dir (Linux behavior).
+			if err := mgr.ImportFromDir(name, loginDescription, tmpDir); err != nil {
+				return err
+			}
+		} else {
+			// Credentials likely went to macOS Keychain or the real config dir.
+			// Read from the platform credential store and save to the profile.
+			if err := mgr.ImportFromCredentialStore(name, loginDescription); err != nil {
+				return err
+			}
 		}
 
 		ui.Success("Profile %q created from login", name)

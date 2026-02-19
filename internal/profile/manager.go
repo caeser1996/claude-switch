@@ -23,14 +23,8 @@ func NewManager(cfg *config.Config) *Manager {
 // ImportFromDir saves credentials from a specific directory as a named profile.
 // This is used by the login command to import from a temporary config dir.
 func (m *Manager) ImportFromDir(name, description, srcDir string) error {
-	if name == "" {
-		return fmt.Errorf("profile name cannot be empty")
-	}
-
-	for _, c := range name {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
-			return fmt.Errorf("invalid profile name %q: use only letters, numbers, hyphens, underscores", name)
-		}
+	if err := validateProfileName(name); err != nil {
+		return err
 	}
 
 	profileDir, err := m.profileDir(name)
@@ -77,17 +71,11 @@ func (m *Manager) ImportFromDir(name, description, srcDir string) error {
 	return m.Config.Save()
 }
 
-// Import saves the current Claude credentials as a named profile.
-func (m *Manager) Import(name, description string) error {
-	if name == "" {
-		return fmt.Errorf("profile name cannot be empty")
-	}
-
-	// Validate name (alphanumeric, hyphens, underscores)
-	for _, c := range name {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
-			return fmt.Errorf("invalid profile name %q: use only letters, numbers, hyphens, underscores", name)
-		}
+// ImportFromCredentialStore reads credentials from the platform's credential
+// store (macOS Keychain or file) and saves them as a named profile.
+func (m *Manager) ImportFromCredentialStore(name, description string) error {
+	if err := validateProfileName(name); err != nil {
+		return err
 	}
 
 	profileDir, err := m.profileDir(name)
@@ -99,23 +87,89 @@ func (m *Manager) Import(name, description string) error {
 		return fmt.Errorf("cannot create profile directory: %w", err)
 	}
 
-	claudeDir, err := config.ClaudeConfigDir()
+	if err := SaveCredentialsToProfile(profileDir); err != nil {
+		os.Remove(profileDir)
+		return fmt.Errorf("cannot capture credentials: %w", err)
+	}
+
+	// Also copy supplementary files from the Claude config dir
+	claudeDir, _ := config.ClaudeConfigDir()
+	if claudeDir != "" {
+		for _, fname := range CredentialFiles {
+			if fname == ".credentials.json" {
+				continue // already saved from credential store
+			}
+			src := filepath.Join(claudeDir, fname)
+			if FileExists(src) {
+				_ = CopyFile(src, filepath.Join(profileDir, fname))
+			}
+		}
+	}
+
+	email := extractEmailFromCredentials(filepath.Join(profileDir, ".credentials.json"))
+
+	isFirst := len(m.Config.Profiles) == 0
+	m.Config.Profiles[name] = config.ProfileEntry{
+		Name:        name,
+		Email:       email,
+		Description: description,
+		CreatedAt:   time.Now().UTC(),
+		IsActive:    isFirst,
+	}
+	if isFirst {
+		m.Config.ActiveProfile = name
+	}
+
+	return m.Config.Save()
+}
+
+// Import saves the current Claude credentials as a named profile.
+func (m *Manager) Import(name, description string) error {
+	if err := validateProfileName(name); err != nil {
+		return err
+	}
+
+	profileDir, err := m.profileDir(name)
 	if err != nil {
 		return err
 	}
 
+	if err := os.MkdirAll(profileDir, 0700); err != nil {
+		return fmt.Errorf("cannot create profile directory: %w", err)
+	}
+
+	// Try reading credentials from the platform store (Keychain on macOS).
+	keychainOK := false
+	if err := SaveCredentialsToProfile(profileDir); err == nil {
+		keychainOK = true
+	}
+
+	claudeDir, err := config.ClaudeConfigDir()
+	if err != nil {
+		if !keychainOK {
+			os.Remove(profileDir)
+			return err
+		}
+	}
+
 	// Copy credential files from Claude config dir
 	copied := 0
-	for _, fname := range CredentialFiles {
-		src := filepath.Join(claudeDir, fname)
-		if !FileExists(src) {
-			continue
+	if claudeDir != "" {
+		for _, fname := range CredentialFiles {
+			if fname == ".credentials.json" && keychainOK {
+				copied++ // already have it from credential store
+				continue
+			}
+			src := filepath.Join(claudeDir, fname)
+			if !FileExists(src) {
+				continue
+			}
+			dst := filepath.Join(profileDir, fname)
+			if err := CopyFile(src, dst); err != nil {
+				return fmt.Errorf("cannot copy %s: %w", fname, err)
+			}
+			copied++
 		}
-		dst := filepath.Join(profileDir, fname)
-		if err := CopyFile(src, dst); err != nil {
-			return fmt.Errorf("cannot copy %s: %w", fname, err)
-		}
-		copied++
 	}
 
 	// Copy home-level credential files
@@ -128,7 +182,6 @@ func (m *Manager) Import(name, description string) error {
 		if !FileExists(src) {
 			continue
 		}
-		// Store with a prefix to avoid conflicts
 		dst := filepath.Join(profileDir, "home_"+fname)
 		if err := CopyFile(src, dst); err != nil {
 			return fmt.Errorf("cannot copy %s: %w", fname, err)
@@ -136,16 +189,17 @@ func (m *Manager) Import(name, description string) error {
 		copied++
 	}
 
-	if copied == 0 {
-		// Cleanup empty dir
-		os.Remove(profileDir)
-		return fmt.Errorf("no credential files found in %s — is Claude Code installed and logged in?", claudeDir)
+	if keychainOK {
+		copied++
 	}
 
-	// Try to extract email from credentials
+	if copied == 0 {
+		os.Remove(profileDir)
+		return fmt.Errorf("no credential files found — is Claude Code installed and logged in?")
+	}
+
 	email := extractEmailFromCredentials(filepath.Join(profileDir, ".credentials.json"))
 
-	// Update config
 	isFirst := len(m.Config.Profiles) == 0
 	m.Config.Profiles[name] = config.ProfileEntry{
 		Name:        name,
@@ -183,12 +237,17 @@ func (m *Manager) Use(name string) error {
 		}
 	}
 
+	// Restore credentials to the platform store (Keychain on macOS, file on Linux).
+	if err := RestoreCredentialsFromProfile(profileDir); err != nil {
+		return fmt.Errorf("cannot restore credentials: %w", err)
+	}
+
 	claudeDir, err := config.ClaudeConfigDir()
 	if err != nil {
 		return err
 	}
 
-	// Restore credential files to Claude config dir
+	// Restore supplementary credential files to Claude config dir
 	for _, fname := range CredentialFiles {
 		src := filepath.Join(profileDir, fname)
 		if !FileExists(src) {
@@ -295,23 +354,29 @@ func (m *Manager) createBackup() error {
 		return fmt.Errorf("cannot create backup directory: %w", err)
 	}
 
-	claudeDir, err := config.ClaudeConfigDir()
-	if err != nil {
-		return err
+	copied := false
+
+	// Backup credentials from platform store (Keychain on macOS).
+	if err := SaveCredentialsToProfile(backupDir); err == nil {
+		copied = true
 	}
 
-	copied := false
-	for _, fname := range CredentialFiles {
-		src := filepath.Join(claudeDir, fname)
-		if !FileExists(src) {
-			continue
+	claudeDir, err := config.ClaudeConfigDir()
+	if err == nil {
+		for _, fname := range CredentialFiles {
+			if fname == ".credentials.json" && copied {
+				continue // already saved from credential store
+			}
+			src := filepath.Join(claudeDir, fname)
+			if !FileExists(src) {
+				continue
+			}
+			dst := filepath.Join(backupDir, fname)
+			if err := CopyFile(src, dst); err != nil {
+				continue
+			}
+			copied = true
 		}
-		dst := filepath.Join(backupDir, fname)
-		if err := CopyFile(src, dst); err != nil {
-			// Non-fatal for backups
-			continue
-		}
-		copied = true
 	}
 
 	home, err := os.UserHomeDir()
@@ -330,11 +395,9 @@ func (m *Manager) createBackup() error {
 	}
 
 	if !copied {
-		// No files to backup, remove the empty dir
 		os.Remove(backupDir)
 	}
 
-	// Prune old backups
 	m.pruneBackups(backupsDir)
 
 	return nil
@@ -361,6 +424,19 @@ func (m *Manager) pruneBackups(backupsDir string) {
 	for _, e := range toRemove {
 		os.RemoveAll(filepath.Join(backupsDir, e.Name()))
 	}
+}
+
+// validateProfileName checks that a profile name is valid.
+func validateProfileName(name string) error {
+	if name == "" {
+		return fmt.Errorf("profile name cannot be empty")
+	}
+	for _, c := range name {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+			return fmt.Errorf("invalid profile name %q: use only letters, numbers, hyphens, underscores", name)
+		}
+	}
+	return nil
 }
 
 // extractEmailFromCredentials tries to read an email from the credentials JSON.
