@@ -20,6 +20,63 @@ func NewManager(cfg *config.Config) *Manager {
 	return &Manager{Config: cfg}
 }
 
+// ImportFromDir saves credentials from a specific directory as a named profile.
+// This is used by the login command to import from a temporary config dir.
+func (m *Manager) ImportFromDir(name, description, srcDir string) error {
+	if name == "" {
+		return fmt.Errorf("profile name cannot be empty")
+	}
+
+	for _, c := range name {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+			return fmt.Errorf("invalid profile name %q: use only letters, numbers, hyphens, underscores", name)
+		}
+	}
+
+	profileDir, err := m.profileDir(name)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(profileDir, 0700); err != nil {
+		return fmt.Errorf("cannot create profile directory: %w", err)
+	}
+
+	copied := 0
+	for _, fname := range CredentialFiles {
+		src := filepath.Join(srcDir, fname)
+		if !FileExists(src) {
+			continue
+		}
+		dst := filepath.Join(profileDir, fname)
+		if err := CopyFile(src, dst); err != nil {
+			return fmt.Errorf("cannot copy %s: %w", fname, err)
+		}
+		copied++
+	}
+
+	if copied == 0 {
+		os.Remove(profileDir)
+		return fmt.Errorf("no credential files found — authentication may not have completed")
+	}
+
+	email := extractEmailFromCredentials(filepath.Join(profileDir, ".credentials.json"))
+
+	isFirst := len(m.Config.Profiles) == 0
+	m.Config.Profiles[name] = config.ProfileEntry{
+		Name:        name,
+		Email:       email,
+		Description: description,
+		CreatedAt:   time.Now().UTC(),
+		IsActive:    isFirst,
+	}
+	if isFirst {
+		m.Config.ActiveProfile = name
+	}
+
+	return m.Config.Save()
+}
+
 // Import saves the current Claude credentials as a named profile.
 func (m *Manager) Import(name, description string) error {
 	if name == "" {
